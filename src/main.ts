@@ -132,11 +132,6 @@ async function run(): Promise<void> {
       `sourceWorkflowId: ${sourceWorkflowId}, sourceRunId: ${sourceRunId}, selfRunId: ${selfRunId}, `
   )
 
-  if (eventName !== 'workflow_run') {
-    throw Error(
-      `This action is only useful in "workflow_run" triggered runs and you used it in ${eventName}`
-    )
-  }
   const [
     headRepo,
     headBranch,
@@ -154,6 +149,8 @@ async function run(): Promise<void> {
     'pullRequestNumber',
     pullRequest ? pullRequest.number.toString() : ''
   )
+  const labelNames = pullRequest ? pullRequest.labels.map(x => x.name) : []
+  verboseOutput('pullRequestLabels', JSON.stringify(labelNames))
   verboseOutput('mergeCommitSha', mergeCommitSha)
   verboseOutput('targetCommitSha', pullRequest ? mergeCommitSha : headSha)
 }

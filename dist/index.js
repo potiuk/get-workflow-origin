@@ -1546,15 +1546,14 @@ function run() {
         core.info(`Repository: ${repository}, Owner: ${owner}, Repo: ${repo}, ` +
             `Event name: ${eventName},` +
             `sourceWorkflowId: ${sourceWorkflowId}, sourceRunId: ${sourceRunId}, selfRunId: ${selfRunId}, `);
-        if (eventName !== 'workflow_run') {
-            throw Error(`This action is only useful in "workflow_run" triggered runs and you used it in ${eventName}`);
-        }
         const [headRepo, headBranch, sourceEventName, headSha, mergeCommitSha, pullRequest] = yield getOrigin(octokit, sourceRunId, owner, repo);
         verboseOutput('sourceHeadRepo', headRepo);
         verboseOutput('sourceHeadBranch', headBranch);
         verboseOutput('sourceHeadSha', headSha);
         verboseOutput('sourceEvent', sourceEventName);
         verboseOutput('pullRequestNumber', pullRequest ? pullRequest.number.toString() : '');
+        const labelNames = pullRequest ? pullRequest.labels.map(x => x.name) : [];
+        verboseOutput('pullRequestLabels', JSON.stringify(labelNames));
         verboseOutput('mergeCommitSha', mergeCommitSha);
         verboseOutput('targetCommitSha', pullRequest ? mergeCommitSha : headSha);
     });
