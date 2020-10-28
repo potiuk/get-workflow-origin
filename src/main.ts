@@ -43,12 +43,14 @@ async function findPullRequest(
   core.info(
     `\nFinding PR request id for: owner: ${owner}, Repo:${repo}, Head:${headRepo}:${headBranch}.\n`
   )
-  const pullRequests = await octokit.pulls.list({
-    owner,
-    repo,
-    head: `${headRepo}:${headBranch}`
-  })
-  for (const pullRequest of pullRequests.data) {
+  const pullRequests = await octokit.paginate(
+    octokit.pulls.list({
+      owner,
+      repo,
+      head: `${headRepo}:${headBranch}`
+    })
+  )
+  for (const pullRequest of pullRequests) {
     core.info(
       `\nComparing: ${pullRequest.number} sha: ${pullRequest.head.sha} with expected: ${headSha}.\n`
     )
@@ -82,7 +84,10 @@ async function getOrigin(
       `Event: ${sourceRun.event}, Head sha: ${sourceRun.head_sha}, url: ${sourceRun.url}`
   )
   let pullRequest: rest.PullsListResponseItem | null = null
-  if (sourceRun.event === 'pull_request') {
+  if (
+    sourceRun.event === 'pull_request' ||
+    sourceRun.event === 'pull_request_review'
+  ) {
     pullRequest = await findPullRequest(
       octokit,
       owner,
