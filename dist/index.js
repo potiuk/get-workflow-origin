@@ -1486,7 +1486,7 @@ function findPullRequest(octokit, owner, repo, headRepo, headBranch, headSha) {
     return __awaiter(this, void 0, void 0, function* () {
         // Finds Pull request for this workflow run
         core.info(`\nFinding PR request id for: owner: ${owner}, Repo:${repo}, Head:${headRepo}:${headBranch}.\n`);
-        const pullRequests = yield octokit.paginate(octokit.pulls.list({
+        const pullRequests = yield octokit.paginate(yield octokit.pulls.list({
             owner,
             repo,
             head: `${headRepo}:${headBranch}`

@@ -44,7 +44,7 @@ async function findPullRequest(
     `\nFinding PR request id for: owner: ${owner}, Repo:${repo}, Head:${headRepo}:${headBranch}.\n`
   )
   const pullRequests = await octokit.paginate(
-    octokit.pulls.list({
+    await octokit.pulls.list({
       owner,
       repo,
       head: `${headRepo}:${headBranch}`

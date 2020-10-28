@@ -2,7 +2,7 @@
 <img alt="get-workflow-origin status"
     src="https://github.com/potiuk/get-workflow-origin/workflows/Test%20the%20build/badge.svg"></a>
 
-# Get Workflow Runs action
+# Get Workflow Origin action
 
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -24,7 +24,8 @@
 # Context and motivation
 
 Get Workflow Origin is an action that provides information about the pull requests that triggered the
-workflow for the `workflow_run` and `pull_request` events.
+workflow for the `pull_request` and `pull_request_review` events or for the `workflow_run` event
+that is triggered by one of those events.
 
 Often in those events you want to get more information about the source run than the
 one provided directly via GitHub context.
