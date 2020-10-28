@@ -46,8 +46,7 @@ async function findPullRequest(
   const pullRequests = await octokit.paginate(
     await octokit.pulls.list({
       owner,
-      repo,
-      head: `${headRepo}:${headBranch}`
+      repo
     })
   )
   for (const pullRequest of pullRequests) {
@@ -121,6 +120,8 @@ async function run(): Promise<void> {
   const eventName = getRequiredEnv('GITHUB_EVENT_NAME')
   const sourceRunId = parseInt(core.getInput('sourceRunId')) || selfRunId
   const [owner, repo] = repository.split('/')
+
+  core.info(`\nPayload: ${JSON.stringify(github.context.payload)}\n`)
 
   core.info(
     `\nGetting workflow id for source run id: ${sourceRunId}, owner: ${owner}, repo: ${repo}\n`

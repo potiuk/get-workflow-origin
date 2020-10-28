@@ -1488,8 +1488,7 @@ function findPullRequest(octokit, owner, repo, headRepo, headBranch, headSha) {
         core.info(`\nFinding PR request id for: owner: ${owner}, Repo:${repo}, Head:${headRepo}:${headBranch}.\n`);
         const pullRequests = yield octokit.paginate(yield octokit.pulls.list({
             owner,
-            repo,
-            head: `${headRepo}:${headBranch}`
+            repo
         }));
         for (const pullRequest of pullRequests) {
             core.info(`\nComparing: ${pullRequest.number} sha: ${pullRequest.head.sha} with expected: ${headSha}.\n`);
@@ -1542,6 +1541,7 @@ function run() {
         const eventName = getRequiredEnv('GITHUB_EVENT_NAME');
         const sourceRunId = parseInt(core.getInput('sourceRunId')) || selfRunId;
         const [owner, repo] = repository.split('/');
+        core.info(`\nPayload: ${JSON.stringify(github.context.payload)}\n`);
         core.info(`\nGetting workflow id for source run id: ${sourceRunId}, owner: ${owner}, repo: ${repo}\n`);
         const sourceWorkflowId = yield getWorkflowId(octokit, sourceRunId, owner, repo);
         core.info(`Repository: ${repository}, Owner: ${owner}, Repo: ${repo}, ` +
