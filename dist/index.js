@@ -1486,12 +1486,12 @@ function findPullRequest(octokit, owner, repo, headRepo, headBranch, headSha) {
     return __awaiter(this, void 0, void 0, function* () {
         // Finds Pull request for this workflow run
         core.info(`\nFinding PR request id for: owner: ${owner}, Repo:${repo}, Head:${headRepo}:${headBranch}.\n`);
-        const pullRequests = yield octokit.pulls.list({
+        const pullRequests = yield octokit.paginate(octokit.pulls.list({
             owner,
             repo,
             head: `${headRepo}:${headBranch}`
-        });
-        for (const pullRequest of pullRequests.data) {
+        }));
+        for (const pullRequest of pullRequests) {
             core.info(`\nComparing: ${pullRequest.number} sha: ${pullRequest.head.sha} with expected: ${headSha}.\n`);
             if (pullRequest.head.sha === headSha) {
                 core.info(`\nFound PR: ${pullRequest.number}\n`);
@@ -1515,7 +1515,8 @@ function getOrigin(octokit, runId, owner, repo) {
             `Head branch: ${sourceRun.head_branch} ` +
             `Event: ${sourceRun.event}, Head sha: ${sourceRun.head_sha}, url: ${sourceRun.url}`);
         let pullRequest = null;
-        if (sourceRun.event === 'pull_request') {
+        if (sourceRun.event === 'pull_request' ||
+            sourceRun.event === 'pull_request_review') {
             pullRequest = yield findPullRequest(octokit, owner, repo, sourceRun.head_repository.owner.login, sourceRun.head_branch, sourceRun.head_sha);
         }
         return [
