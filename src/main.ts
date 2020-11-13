@@ -52,7 +52,10 @@ async function findPullRequest(
       `\nComparing: ${pullRequest.number} sha: ${pullRequest.head.sha} with expected: ${headSha}.\n`
     )
     if (pullRequest.head.sha === headSha) {
-      core.info(`\nFound PR: ${pullRequest.number}\n`)
+      core.info(
+        `\nFound PR: ${pullRequest.number}. ` +
+          `Url: https://api.github.com/repos/${owner}/${repo}/pulls/${pullRequest.number}\n`
+      )
       return pullRequest
     }
   }
@@ -66,7 +69,15 @@ async function getOrigin(
   owner: string,
   repo: string
 ): Promise<
-  [string, string, string, string, string, rest.PullsListResponseItem | null]
+  [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    rest.PullsListResponseItem | null
+  ]
 > {
   const reply = await octokit.actions.getWorkflowRun({
     owner,
@@ -75,6 +86,7 @@ async function getOrigin(
     run_id: runId
   })
   const sourceRun = reply.data
+  core.debug(JSON.stringify(reply.data))
   core.info(
     `Source workflow: Head repo: ${sourceRun.head_repository.full_name}, ` +
       `Head branch: ${sourceRun.head_branch} ` +
@@ -101,6 +113,7 @@ async function getOrigin(
     reply.data.event,
     reply.data.head_sha,
     pullRequest ? pullRequest.merge_commit_sha : '',
+    pullRequest ? pullRequest.base.ref : reply.data.head_branch,
     pullRequest
   ]
 }
@@ -119,7 +132,7 @@ async function run(): Promise<void> {
   const sourceRunId = parseInt(core.getInput('sourceRunId')) || selfRunId
   const [owner, repo] = repository.split('/')
 
-  // core.info(`\nPayload: ${JSON.stringify(github.context.payload)}\n`)
+  core.debug(`\nPayload: ${JSON.stringify(github.context.payload)}\n`)
 
   core.info(
     `\nGetting workflow id for source run id: ${sourceRunId}, owner: ${owner}, repo: ${repo}\n`
@@ -142,6 +155,7 @@ async function run(): Promise<void> {
     sourceEventName,
     headSha,
     mergeCommitSha,
+    targetBranch,
     pullRequest
   ] = await getOrigin(octokit, sourceRunId, owner, repo)
 
@@ -157,6 +171,7 @@ async function run(): Promise<void> {
   verboseOutput('pullRequestLabels', JSON.stringify(labelNames))
   verboseOutput('mergeCommitSha', mergeCommitSha)
   verboseOutput('targetCommitSha', pullRequest ? mergeCommitSha : headSha)
+  verboseOutput('targetBranch', targetBranch)
 }
 
 run()
