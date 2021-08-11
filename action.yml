@@ -1,5 +1,5 @@
 name: 'Get Workflow Origin'
-description: 'Gets origin og Workflow Runs.'
+description: 'Gets origin of Workflow Runs.'
 author: 'potiuk'
 inputs:
   token:
