@@ -34,7 +34,7 @@ module.exports =
 /******/ 	// the startup function
 /******/ 	function startup() {
 /******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(198);
+/******/ 		return __webpack_require__(131);
 /******/ 	};
 /******/
 /******/ 	// run startup
@@ -1776,6 +1776,154 @@ module.exports = require("child_process");
 
 /***/ }),
 
+/***/ 131:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const github = __importStar(__webpack_require__(469));
+const core = __importStar(__webpack_require__(393));
+function getWorkflowId(octokit, runId, owner, repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const reply = yield octokit.actions.getWorkflowRun({
+            owner,
+            repo,
+            // eslint-disable-next-line @typescript-eslint/camelcase
+            run_id: runId
+        });
+        core.info(`The source run ${runId} is in ${reply.data.workflow_url} workflow`);
+        const workflowIdString = reply.data.workflow_url.split('/').pop() || '';
+        if (!(workflowIdString.length > 0)) {
+            throw new Error('Could not resolve workflow');
+        }
+        return parseInt(workflowIdString);
+    });
+}
+function getRequiredEnv(key) {
+    const value = process.env[key];
+    if (value === undefined) {
+        const message = `${key} was not defined.`;
+        throw new Error(message);
+    }
+    return value;
+}
+function findPullRequest(octokit, owner, repo, headRepo, headBranch, headSha) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Finds Pull request for this workflow run
+        core.info(`\nFinding PR request id for: owner: ${owner}, Repo:${repo}.\n`);
+        const pullRequests = yield octokit.paginate(yield octokit.pulls.list({
+            owner,
+            repo
+        }));
+        for (const pullRequest of pullRequests) {
+            core.info(`\nComparing: ${pullRequest.number} sha: ${pullRequest.head.sha} with expected: ${headSha}.\n`);
+            if (pullRequest.head.sha === headSha) {
+                core.info(`\nFound PR: ${pullRequest.number}. ` +
+                    `Url: https://api.github.com/repos/${owner}/${repo}/pulls/${pullRequest.number}\n`);
+                return pullRequest;
+            }
+        }
+        core.info(`\nCould not find the PR for this build :(\n`);
+        return null;
+    });
+}
+function getOrigin(octokit, runId, owner, repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const reply = yield octokit.actions.getWorkflowRun({
+            owner,
+            repo,
+            // eslint-disable-next-line @typescript-eslint/camelcase
+            run_id: runId
+        });
+        const sourceRun = reply.data;
+        core.debug(JSON.stringify(reply.data));
+        core.info(`Source workflow: Head repo: ${sourceRun.head_repository.full_name}, ` +
+            `Head branch: ${sourceRun.head_branch} ` +
+            `Event: ${sourceRun.event}, Head sha: ${sourceRun.head_sha}, url: ${sourceRun.url}`);
+        let pullRequest = null;
+        if (sourceRun.event === 'pull_request' ||
+            sourceRun.event === 'pull_request_review') {
+            pullRequest = yield findPullRequest(octokit, owner, repo, sourceRun.head_repository.owner.login, sourceRun.head_branch, sourceRun.head_sha);
+        }
+        return [
+            reply.data.head_repository.full_name,
+            reply.data.head_branch,
+            reply.data.event,
+            reply.data.head_sha,
+            pullRequest ? pullRequest.merge_commit_sha : '',
+            pullRequest ? pullRequest.base.ref : reply.data.head_branch,
+            pullRequest
+        ];
+    });
+}
+function verboseOutput(name, value) {
+    core.info(`Setting output: ${name}: ${value}`);
+    core.setOutput(name, value);
+}
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const token = core.getInput('token', { required: true });
+        const octokit = new github.GitHub(token);
+        const selfRunId = parseInt(getRequiredEnv('GITHUB_RUN_ID'));
+        const repository = getRequiredEnv('GITHUB_REPOSITORY');
+        const eventName = getRequiredEnv('GITHUB_EVENT_NAME');
+        const sourceRunId = parseInt(core.getInput('sourceRunId')) || selfRunId;
+        const [owner, repo] = repository.split('/');
+        core.debug(`\nPayload: ${JSON.stringify(github.context.payload)}\n`);
+        core.info(`\nGetting workflow id for source run id: ${sourceRunId}, owner: ${owner}, repo: ${repo}\n`);
+        const sourceWorkflowId = yield getWorkflowId(octokit, sourceRunId, owner, repo);
+        core.info(`Repository: ${repository}, Owner: ${owner}, Repo: ${repo}, ` +
+            `Event name: ${eventName},` +
+            `sourceWorkflowId: ${sourceWorkflowId}, sourceRunId: ${sourceRunId}, selfRunId: ${selfRunId}, `);
+        const [headRepo, headBranch, sourceEventName, headSha, mergeCommitSha, targetBranch, pullRequest] = yield getOrigin(octokit, sourceRunId, owner, repo);
+        verboseOutput('sourceHeadRepo', headRepo);
+        verboseOutput('sourceHeadBranch', headBranch);
+        verboseOutput('sourceHeadSha', headSha);
+        verboseOutput('sourceEvent', sourceEventName);
+        verboseOutput('pullRequestNumber', pullRequest ? pullRequest.number.toString() : '');
+        const labelNames = pullRequest ? pullRequest.labels.map(x => x.name) : [];
+        verboseOutput('pullRequestLabels', JSON.stringify(labelNames));
+        verboseOutput('mergeCommitSha', mergeCommitSha);
+        verboseOutput('targetCommitSha', pullRequest ? mergeCommitSha : headSha);
+        verboseOutput('targetBranch', targetBranch);
+    });
+}
+run()
+    .then(() => core.info('\n############### Get Workflow Origin complete ##################\n'))
+    .catch(e => core.setFailed(e.message));
+
+
+/***/ }),
+
 /***/ 141:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -2326,154 +2474,6 @@ function checkMode (stat, options) {
 
   return ret
 }
-
-
-/***/ }),
-
-/***/ 198:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const github = __importStar(__webpack_require__(469));
-const core = __importStar(__webpack_require__(393));
-function getWorkflowId(octokit, runId, owner, repo) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const reply = yield octokit.actions.getWorkflowRun({
-            owner,
-            repo,
-            // eslint-disable-next-line @typescript-eslint/camelcase
-            run_id: runId
-        });
-        core.info(`The source run ${runId} is in ${reply.data.workflow_url} workflow`);
-        const workflowIdString = reply.data.workflow_url.split('/').pop() || '';
-        if (!(workflowIdString.length > 0)) {
-            throw new Error('Could not resolve workflow');
-        }
-        return parseInt(workflowIdString);
-    });
-}
-function getRequiredEnv(key) {
-    const value = process.env[key];
-    if (value === undefined) {
-        const message = `${key} was not defined.`;
-        throw new Error(message);
-    }
-    return value;
-}
-function findPullRequest(octokit, owner, repo, headRepo, headBranch, headSha) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Finds Pull request for this workflow run
-        core.info(`\nFinding PR request id for: owner: ${owner}, Repo:${repo}.\n`);
-        const pullRequests = yield octokit.paginate(yield octokit.pulls.list({
-            owner,
-            repo
-        }));
-        for (const pullRequest of pullRequests) {
-            core.info(`\nComparing: ${pullRequest.number} sha: ${pullRequest.head.sha} with expected: ${headSha}.\n`);
-            if (pullRequest.head.sha === headSha) {
-                core.info(`\nFound PR: ${pullRequest.number}. ` +
-                    `Url: https://api.github.com/repos/${owner}/${repo}/pulls/${pullRequest.number}\n`);
-                return pullRequest;
-            }
-        }
-        core.info(`\nCould not find the PR for this build :(\n`);
-        return null;
-    });
-}
-function getOrigin(octokit, runId, owner, repo) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const reply = yield octokit.actions.getWorkflowRun({
-            owner,
-            repo,
-            // eslint-disable-next-line @typescript-eslint/camelcase
-            run_id: runId
-        });
-        const sourceRun = reply.data;
-        core.debug(JSON.stringify(reply.data));
-        core.info(`Source workflow: Head repo: ${sourceRun.head_repository.full_name}, ` +
-            `Head branch: ${sourceRun.head_branch} ` +
-            `Event: ${sourceRun.event}, Head sha: ${sourceRun.head_sha}, url: ${sourceRun.url}`);
-        let pullRequest = null;
-        if (sourceRun.event === 'pull_request' ||
-            sourceRun.event === 'pull_request_review') {
-            pullRequest = yield findPullRequest(octokit, owner, repo, sourceRun.head_repository.owner.login, sourceRun.head_branch, sourceRun.head_sha);
-        }
-        return [
-            reply.data.head_repository.full_name,
-            reply.data.head_branch,
-            reply.data.event,
-            reply.data.head_sha,
-            pullRequest ? pullRequest.merge_commit_sha : '',
-            pullRequest ? pullRequest.base.ref : reply.data.head_branch,
-            pullRequest
-        ];
-    });
-}
-function verboseOutput(name, value) {
-    core.info(`Setting output: ${name}: ${value}`);
-    core.setOutput(name, value);
-}
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const token = core.getInput('token', { required: true });
-        const octokit = new github.GitHub(token);
-        const selfRunId = parseInt(getRequiredEnv('GITHUB_RUN_ID'));
-        const repository = getRequiredEnv('GITHUB_REPOSITORY');
-        const eventName = getRequiredEnv('GITHUB_EVENT_NAME');
-        const sourceRunId = parseInt(core.getInput('sourceRunId')) || selfRunId;
-        const [owner, repo] = repository.split('/');
-        core.debug(`\nPayload: ${JSON.stringify(github.context.payload)}\n`);
-        core.info(`\nGetting workflow id for source run id: ${sourceRunId}, owner: ${owner}, repo: ${repo}\n`);
-        const sourceWorkflowId = yield getWorkflowId(octokit, sourceRunId, owner, repo);
-        core.info(`Repository: ${repository}, Owner: ${owner}, Repo: ${repo}, ` +
-            `Event name: ${eventName},` +
-            `sourceWorkflowId: ${sourceWorkflowId}, sourceRunId: ${sourceRunId}, selfRunId: ${selfRunId}, `);
-        const [headRepo, headBranch, sourceEventName, headSha, mergeCommitSha, targetBranch, pullRequest] = yield getOrigin(octokit, sourceRunId, owner, repo);
-        verboseOutput('sourceHeadRepo', headRepo);
-        verboseOutput('sourceHeadBranch', headBranch);
-        verboseOutput('sourceHeadSha', headSha);
-        verboseOutput('sourceEvent', sourceEventName);
-        verboseOutput('pullRequestNumber', pullRequest ? pullRequest.number.toString() : '');
-        const labelNames = pullRequest ? pullRequest.labels.map(x => x.name) : [];
-        verboseOutput('pullRequestLabels', JSON.stringify(labelNames));
-        verboseOutput('mergeCommitSha', mergeCommitSha);
-        verboseOutput('targetCommitSha', pullRequest ? mergeCommitSha : headSha);
-        verboseOutput('targetBranch', targetBranch);
-    });
-}
-run()
-    .then(() => core.info('\n############### Get Workflow Origin complete ##################\n'))
-    .catch(e => core.setFailed(e.message));
 
 
 /***/ }),
