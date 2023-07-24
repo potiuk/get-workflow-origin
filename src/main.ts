@@ -1,14 +1,21 @@
-import * as github from '@actions/github'
 import * as core from '@actions/core'
-import * as rest from '@octokit/rest'
+import {Octokit as Core, RestEndpointMethodTypes} from '@octokit/action'
+
+const ghApi = process.env['GITHUB_API_URL'] || 'https://api.github.com'
+
+type PullsListResponseData = RestEndpointMethodTypes['pulls']['list']['response']['data']
+
+type MyOctokit = InstanceType<typeof Core>
+
+type PullsListRes = PullsListResponseData[0]
 
 async function getWorkflowId(
-  octokit: github.GitHub,
+  octokit: MyOctokit,
   runId: number,
   owner: string,
   repo: string
 ): Promise<number> {
-  const reply = await octokit.actions.getWorkflowRun({
+  const reply = await octokit.rest.actions.getWorkflowRun({
     owner,
     repo,
     // eslint-disable-next-line @typescript-eslint/camelcase
@@ -32,21 +39,24 @@ function getRequiredEnv(key: string): string {
 }
 
 async function findPullRequest(
-  octokit: github.GitHub,
+  octokit: MyOctokit,
   owner: string,
   repo: string,
   headRepo: string,
-  headBranch: string,
+  headBranch: string | null,
   headSha: string
-): Promise<rest.PullsListResponseItem | null> {
+): Promise<PullsListRes | null> {
   // Finds Pull request for this workflow run
   core.info(`\nFinding PR request id for: owner: ${owner}, Repo:${repo}.\n`)
+
   const pullRequests = await octokit.paginate(
-    await octokit.pulls.list({
+    'GET /repos/{owner}/{repo}/pulls',
+    {
       owner,
       repo
-    })
+    }
   )
+
   for (const pullRequest of pullRequests) {
     core.info(
       `\nComparing: ${pullRequest.number} sha: ${pullRequest.head.sha} with expected: ${headSha}.\n`
@@ -54,7 +64,7 @@ async function findPullRequest(
     if (pullRequest.head.sha === headSha) {
       core.info(
         `\nFound PR: ${pullRequest.number}. ` +
-          `Url: https://api.github.com/repos/${owner}/${repo}/pulls/${pullRequest.number}\n`
+          `Url: ${ghApi}/${owner}/${repo}/pulls/${pullRequest.number}\n`
       )
       return pullRequest
     }
@@ -64,22 +74,22 @@ async function findPullRequest(
 }
 
 async function getOrigin(
-  octokit: github.GitHub,
+  octokit: MyOctokit,
   runId: number,
   owner: string,
   repo: string
 ): Promise<
   [
     string,
+    string | null,
     string,
     string,
     string,
-    string,
-    string,
-    rest.PullsListResponseItem | null
+    string | null,
+    PullsListRes | null
   ]
 > {
-  const reply = await octokit.actions.getWorkflowRun({
+  const reply = await octokit.rest.actions.getWorkflowRun({
     owner,
     repo,
     // eslint-disable-next-line @typescript-eslint/camelcase
@@ -92,7 +102,8 @@ async function getOrigin(
       `Head branch: ${sourceRun.head_branch} ` +
       `Event: ${sourceRun.event}, Head sha: ${sourceRun.head_sha}, url: ${sourceRun.url}`
   )
-  let pullRequest: rest.PullsListResponseItem | null = null
+  let pullRequest: PullsListRes | null = null
+
   if (
     sourceRun.event === 'pull_request' ||
     sourceRun.event === 'pull_request_review'
@@ -112,7 +123,8 @@ async function getOrigin(
     reply.data.head_branch,
     reply.data.event,
     reply.data.head_sha,
-    pullRequest ? pullRequest.merge_commit_sha : '',
+    // eslint-disable-next-line @typescript-eslint/camelcase
+    pullRequest?.merge_commit_sha ? pullRequest.merge_commit_sha : '',
     pullRequest ? pullRequest.base.ref : reply.data.head_branch,
     pullRequest
   ]
@@ -125,14 +137,16 @@ function verboseOutput(name: string, value: string): void {
 
 async function run(): Promise<void> {
   const token = core.getInput('token', {required: true})
-  const octokit = new github.GitHub(token)
+  const octokit = new Core({
+    auth: token
+  })
   const selfRunId = parseInt(getRequiredEnv('GITHUB_RUN_ID'))
   const repository = getRequiredEnv('GITHUB_REPOSITORY')
   const eventName = getRequiredEnv('GITHUB_EVENT_NAME')
   const sourceRunId = parseInt(core.getInput('sourceRunId')) || selfRunId
   const [owner, repo] = repository.split('/')
 
-  core.debug(`\nPayload: ${JSON.stringify(github.context.payload)}\n`)
+  // core.debug(`\nPayload: ${JSON.stringify(github.context.payload)}\n`)
 
   core.info(
     `\nGetting workflow id for source run id: ${sourceRunId}, owner: ${owner}, repo: ${repo}\n`
@@ -160,18 +174,19 @@ async function run(): Promise<void> {
   ] = await getOrigin(octokit, sourceRunId, owner, repo)
 
   verboseOutput('sourceHeadRepo', headRepo)
-  verboseOutput('sourceHeadBranch', headBranch)
+  headBranch && verboseOutput('sourceHeadBranch', headBranch)
   verboseOutput('sourceHeadSha', headSha)
   verboseOutput('sourceEvent', sourceEventName)
   verboseOutput(
     'pullRequestNumber',
     pullRequest ? pullRequest.number.toString() : ''
   )
+
   const labelNames = pullRequest ? pullRequest.labels.map(x => x.name) : []
   verboseOutput('pullRequestLabels', JSON.stringify(labelNames))
   verboseOutput('mergeCommitSha', mergeCommitSha)
   verboseOutput('targetCommitSha', pullRequest ? mergeCommitSha : headSha)
-  verboseOutput('targetBranch', targetBranch)
+  targetBranch && verboseOutput('targetBranch', targetBranch)
 }
 
 run()
