@@ -8,7 +8,7 @@
     "build": "tsc",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
-    "lint": "eslint src/**/*.ts --debug",
+    "lint": "eslint src/**/*.ts",
     "pack": "ncc build",
     "test": "jest",
     "all": "npm run build && npm run format && npm run lint && npm run pack && npm test",
@@ -31,17 +31,18 @@
   },
   "devDependencies": {
     "@types/jest": "^24.0.23",
-    "@types/node": "^12.7.12",
-    "@typescript-eslint/parser": "^2.8.0",
+    "@types/node": "^20.4.5",
+    "@typescript-eslint/eslint-plugin": "^6.2.0",
+    "@typescript-eslint/parser": "^6.2.0",
     "@vercel/ncc": "^0.36.1",
-    "eslint": "^5.16.0",
+    "eslint": "^8.45.0",
     "eslint-plugin-github": "^2.0.0",
     "eslint-plugin-jest": "^22.21.0",
-    "jest": "^26.2.2",
+    "jest": "^26.6.3",
     "jest-circus": "^26.2.2",
     "js-yaml": "^4.1.0",
     "prettier": "^3.0.0",
-    "ts-jest": "^26.1.4",
+    "ts-jest": "^26.5.6",
     "typescript": "^5.1.6"
   }
 }

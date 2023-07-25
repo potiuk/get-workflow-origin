@@ -3,7 +3,8 @@ import {Octokit as Core, RestEndpointMethodTypes} from '@octokit/action'
 
 const ghApi = process.env['GITHUB_API_URL'] || 'https://api.github.com'
 
-type PullsListResponseData = RestEndpointMethodTypes['pulls']['list']['response']['data']
+type PullsListResponseData =
+  RestEndpointMethodTypes['pulls']['list']['response']['data']
 
 type MyOctokit = InstanceType<typeof Core>
 
@@ -18,7 +19,6 @@ async function getWorkflowId(
   const reply = await octokit.rest.actions.getWorkflowRun({
     owner,
     repo,
-    // eslint-disable-next-line @typescript-eslint/camelcase
     run_id: runId
   })
   core.info(`The source run ${runId} is in ${reply.data.workflow_url} workflow`)
@@ -92,7 +92,7 @@ async function getOrigin(
   const reply = await octokit.rest.actions.getWorkflowRun({
     owner,
     repo,
-    // eslint-disable-next-line @typescript-eslint/camelcase
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     run_id: runId
   })
   const sourceRun = reply.data
@@ -123,7 +123,6 @@ async function getOrigin(
     reply.data.head_branch,
     reply.data.event,
     reply.data.head_sha,
-    // eslint-disable-next-line @typescript-eslint/camelcase
     pullRequest?.merge_commit_sha ? pullRequest.merge_commit_sha : '',
     pullRequest ? pullRequest.base.ref : reply.data.head_branch,
     pullRequest
