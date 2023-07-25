@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+// eslint-disable-next-line import/named
 import {Octokit as Core, RestEndpointMethodTypes} from '@octokit/action'
 
 const ghApi = process.env['GITHUB_API_URL'] || 'https://api.github.com'
@@ -21,6 +22,7 @@ async function getWorkflowId(
     repo,
     run_id: runId
   })
+  // eslint-disable-next-line i18n-text/no-en
   core.info(`The source run ${runId} is in ${reply.data.workflow_url} workflow`)
   const workflowIdString = reply.data.workflow_url.split('/').pop() || ''
   if (!(workflowIdString.length > 0)) {
@@ -92,7 +94,6 @@ async function getOrigin(
   const reply = await octokit.rest.actions.getWorkflowRun({
     owner,
     repo,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     run_id: runId
   })
   const sourceRun = reply.data
@@ -130,6 +131,7 @@ async function getOrigin(
 }
 
 function verboseOutput(name: string, value: string): void {
+  // eslint-disable-next-line i18n-text/no-en
   core.info(`Setting output: ${name}: ${value}`)
   core.setOutput(name, value)
 }
@@ -189,9 +191,11 @@ async function run(): Promise<void> {
 }
 
 run()
+  // eslint-disable-next-line github/no-then
   .then(() =>
     core.info(
       '\n############### Get Workflow Origin complete ##################\n'
     )
   )
+  // eslint-disable-next-line github/no-then
   .catch(e => core.setFailed(e.message))
