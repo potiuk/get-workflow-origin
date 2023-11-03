@@ -2,6 +2,12 @@
 <img alt="get-workflow-origin status"
     src="https://github.com/potiuk/get-workflow-origin/workflows/Test%20the%20build/badge.svg"></a>
 
+**NOTE!** This project is not actively maintained. There are other ways to get this information from workflow
+(for example Github API in Python) that are likely easier to maintain and use. 
+
+If someone would like to take over maintenance of it I am happy to transfer it or you can make a fork of this project.
+
+
 # Get Workflow Origin action
 
 
